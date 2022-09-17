@@ -2,40 +2,127 @@
 
 <head>
   <title>SigPhones</title>
+
   <script type="text/javascript" src="https://damianofalcioni.github.io/js-aruco2/src/cv.js"></script>
   <script type="text/javascript" src="https://damianofalcioni.github.io/js-aruco2/src/aruco.js"></script>
-  <link rel="stylesheet" href="main.css">
+
   <script>
-    var video, canvas, context, imageData, detector, videoData;
-    var markers_seen = new Array();
-    window.addEventListener('load', function() {
-      document.querySelector('input[type="file"]').addEventListener('change', function() {
-          if (this.files && this.files[0]) {
-              imageData = URL.createObjectURL(this.files[0]); // set src to blob url
+    var video, canvas, context, imageData, detector;
+
+    function onLoad(){
+      video = document.getElementById("video");
+      canvas = document.getElementById("canvas");
+      context = canvas.getContext("2d");
+
+      canvas.width = parseInt(canvas.style.width);
+      canvas.height = parseInt(canvas.style.height);
+
+      if (navigator.mediaDevices === undefined) {
+        navigator.mediaDevices = {};
+      }
+
+      if (navigator.mediaDevices.getUserMedia === undefined) {
+        navigator.mediaDevices.getUserMedia = function(constraints) {
+          var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+          if (!getUserMedia) {
+            return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
           }
-      });
-    });
 
-    detector = new AR.Detector({
-      dictionaryName: 'ARUCO'
-    });
-
-    function processImage() {
-      var markers = detector.detect(imageData);
-      getId(markers);
-    }
-
-    function getId(markers){
-      var corners, corner, x, y, i, j;
-      for (i = 0; i !== markers.length; ++ i){
-        if (markers_seen.includes(markers[i].id) == false) {
-          markers_seen.push(markers[i].id);
+          return new Promise(function(resolve, reject) {
+            getUserMedia.call(navigator, constraints, resolve, reject);
+          });
         }
       }
-      document.getElementById("phones").innerHTML = "Phones Detected: " + markers_seen
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true, facingMode: {exact: 'environment'}})
+        .then(function(stream) {
+          if ("srcObject" in video) {
+            video.srcObject = stream;
+          } else {
+            video.src = window.URL.createObjectURL(stream);
+          }
+        })
+        .catch(function(err) {
+          console.log(err.name + ": " + err.message);
+        }
+      );
+
+      detector = new AR.Detector({
+        dictionaryName: 'ARUCO'
+      });
+
+      requestAnimationFrame(tick);
     }
 
-    // window.onload = onLoad;
+    function tick(){
+      requestAnimationFrame(tick);
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA){
+        snapshot();
+
+        var markers = detector.detect(imageData);
+        drawCorners(markers);
+        drawId(markers);
+      }
+    }
+
+    function snapshot(){
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCorners(markers){
+      var corners, corner, i, j;
+
+      context.lineWidth = 3;
+
+      for (i = 0; i !== markers.length; ++ i){
+        corners = markers[i].corners;
+
+        context.strokeStyle = "red";
+        context.beginPath();
+
+        for (j = 0; j !== corners.length; ++ j){
+          corner = corners[j];
+          context.moveTo(corner.x, corner.y);
+          corner = corners[(j + 1) % corners.length];
+          context.lineTo(corner.x, corner.y);
+        }
+
+        context.stroke();
+        context.closePath();
+
+        context.strokeStyle = "green";
+        context.strokeRect(corners[0].x - 2, corners[0].y - 2, 4, 4);
+      }
+    }
+
+    function drawId(markers){
+      var corners, corner, x, y, i, j;
+
+      context.strokeStyle = "blue";
+      context.lineWidth = 1;
+
+      for (i = 0; i !== markers.length; ++ i){
+        corners = markers[i].corners;
+
+        x = Infinity;
+        y = Infinity;
+
+        for (j = 0; j !== corners.length; ++ j){
+          corner = corners[j];
+
+          x = Math.min(x, corner.x);
+          y = Math.min(y, corner.y);
+        }
+
+        context.strokeText(markers[i].id, x, y)
+      }
+    }
+
+    window.onload = onLoad;
   </script>
 
 </head>
@@ -43,12 +130,10 @@
 <body style="font-family: monospace;">
 
   <center>
-    <h1>>SigPhones</h1>
-    <input type='file' accept="image/*"/>
-    <p class="text" id="phones">Phones Detected: </p>
-    <button class="btn" onclick="" style="width:100%;height:5%">Save Data to a Spreadsheet</button>
+    <div style="margin: 10px;"><strong>>SigPhones</strong></div>
     <video id="video" autoplay="true" style="display:none;"></video>
-    <canvas id="canvas"></canvas><br>
+    <canvas id="canvas" style="width:640px; height:480px;"></canvas>
+    <h1>Phones: </h1>
   </center>
 
 </body>

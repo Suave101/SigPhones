@@ -6,23 +6,6 @@
   <script type="text/javascript" src="https://damianofalcioni.github.io/js-aruco2/src/aruco.js"></script>
   <link rel="stylesheet" href="main.css">
   <script>
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
-      let videoSourcesSelect = document.getElementById("video-source");
-      devices.forEach((device) => {
-          let option = new Option();
-          option.value = device.deviceId;
-          switch(device.kind){
-              case "videoinput":
-                  option.text = device.label || `Camera ${videoSourcesSelect.length + 1}`;
-                  videoSourcesSelect.appendChild(option);
-                  break;
-          }
-
-          console.log(device);
-      });
-  }).catch(function (e) {
-      console.log(e.name + ": " + e.message);
-  });
     var video, canvas, context, imageData, detector;
     var markers_seen = new Array();
 
@@ -52,7 +35,7 @@
       }
 
       navigator.mediaDevices
-        .getUserMedia({ video: true })
+        .getUserMedia({ video: true facingMode: { exact: "enviroment" }})
         .then(function(stream) {
           if ("srcObject" in video) {
             video.srcObject = stream;

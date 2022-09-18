@@ -8,6 +8,7 @@
 
   <script>
     var video, canvas, context, imageData, detector;
+    var markers_found = new Array();
 
     function onLoad(){
       video = document.getElementById("video");
@@ -20,10 +21,11 @@
       if (navigator.mediaDevices === undefined) {
         navigator.mediaDevices = {};
       }
-
+      console.log(navigator.mediaDevices);
       if (navigator.mediaDevices.getUserMedia === undefined) {
         navigator.mediaDevices.getUserMedia = function(constraints) {
           var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+          console.log(constraints);
 
           if (!getUserMedia) {
             return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
@@ -36,7 +38,7 @@
       }
 
       navigator.mediaDevices
-        .getUserMedia({ video: true, facingMode: {exact: 'user'}})
+        .getUserMedia({ video: true, facingMode: 'environment'})
         .then(function(stream) {
           if ("srcObject" in video) {
             video.srcObject = stream;
@@ -117,7 +119,10 @@
           x = Math.min(x, corner.x);
           y = Math.min(y, corner.y);
         }
-
+        if (markers_found.includes(markers[i].id)) {
+          markers_found.push(markers[i].id);
+        }
+        document.getElementById("phones").innerHTML = "Phones: " + markers_found + "]";
         context.strokeText(markers[i].id, x, y)
       }
     }
@@ -133,7 +138,7 @@
     <div style="margin: 10px;"><strong>>SigPhones</strong></div>
     <video id="video" autoplay="true" style="display:none;"></video>
     <canvas id="canvas" style="width:640px; height:480px;"></canvas>
-    <h1>Phones: </h1>
+    <h1 id="phones">Phones: </h1>
   </center>
 
 </body>
